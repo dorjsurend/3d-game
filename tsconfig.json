@@ -12,6 +12,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "types": ["babylonjs", "babylonjs-loaders", "babylonjs-gui"],
     "plugins": [
       {
         "name": "next"
