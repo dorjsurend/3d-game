@@ -16,13 +16,16 @@ import { AdvancedDynamicTexture, TextBlock } from 'babylonjs-gui'
 import 'babylonjs-loaders'
 import { ZombieCharacter } from '../characters/zombie'
 import { GraveEnvironment } from '../environments/grave'
+import { isEmpty } from 'lodash'
 
 export class GameScene {
     scene: Scene
     engine: Engine
     ground: Mesh
     zombies: ZombieCharacter[] = []
+    keyboardInput: string = ''
     shadow!: ShadowGenerator
+    targetZombieIndex: number | null = null
 
     constructor(private canvas: HTMLCanvasElement) {
         this.engine = new Engine(this.canvas, true)
@@ -67,7 +70,7 @@ export class GameScene {
         let j = 0
         for (let i = -2.5; -2.5 <= i && i <= 2.5; i = i + 1.6, j++) {
             const textBlock = this.CreateTextBlock(words[j])
-            const randomNumber = Math.floor(Math.random() * 3)
+            const randomNumber = Math.floor(Math.random() * 2)
             const newZombie = new ZombieCharacter(
                 this.scene,
                 new Vector3(i, 0, -3),
@@ -123,15 +126,47 @@ export class GameScene {
         return camera
     }
 
-    CheckZombieText(key: string) {
-        const selectedZombie = this.zombies.filter((zombie) => {
-            const textBlock = zombie.tag as TextBlock
+    MatchAndSlice() {
+        if (this.targetZombieIndex != null) {
+            const targetZombie = this.zombies[this.targetZombieIndex]
+            const inputWord = this.keyboardInput
 
-            textBlock.text.startsWith
-        })
-        for (let i = 0; i < this.zombies.length; i++) {
-            const zombie = this.zombies[i]
-            const textBlock = zombie.tag as TextBlock
+            const result = targetZombie.word.startsWith(inputWord)
+
+            if (result) {
+                targetZombie.tag.text = targetZombie.tag.text.substring(1)
+                targetZombie.ChangeAnimation('hit')
+                this.zombies[this.targetZombieIndex] = targetZombie
+            } else {
+                this.keyboardInput = this.keyboardInput.slice(0, -1)
+            }
+
+            if (result && this.keyboardInput === targetZombie.word) {
+                targetZombie.ChangeAnimation('death')
+                this.targetZombieIndex = null
+                this.keyboardInput = ''
+            }
+        }
+    }
+
+    HandleZombieText(key: string) {
+        this.keyboardInput += key
+        const targetIndex = this.targetZombieIndex
+
+        if (targetIndex != null) {
+            this.MatchAndSlice()
+        } else {
+            const selectedZombieIndex = this.zombies.findIndex((zombie) => {
+                const textBlock = zombie.tag as TextBlock
+                return textBlock.text[0] === key
+            })
+
+            if (selectedZombieIndex != -1) {
+                this.targetZombieIndex = selectedZombieIndex
+                this.MatchAndSlice()
+            } else {
+                this.keyboardInput = ''
+            }
         }
     }
 
@@ -153,7 +188,7 @@ export class GameScene {
         light.intensity = 1
 
         const shadowGenerator = new ShadowGenerator(1024, light)
-        shadowGenerator.usePoissonSampling = true // Optionally, improve shadow quality
+        shadowGenerator.usePoissonSampling = true
         this.shadow = shadowGenerator
 
         this.CreateCamera()
@@ -161,7 +196,14 @@ export class GameScene {
         scene.onKeyboardObservable.add((kbInfo) => {
             switch (kbInfo.type) {
                 case KeyboardEventTypes.KEYDOWN:
-                    this.CheckZombieText(kbInfo.event.key)
+                    const { keyCode, key } = kbInfo.event
+
+                    if (keyCode === 8) {
+                        this.keyboardInput = this.keyboardInput.slice(0, -1)
+                        break
+                    }
+
+                    if (keyCode >= 65 && keyCode <= 90) this.HandleZombieText(key)
                     break
             }
         })

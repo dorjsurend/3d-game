@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@types/cannon": "^0.1.12",
+    "@types/lodash": "^4.17.9",
     "babylonjs": "^7.6.0",
     "babylonjs-gui": "^7.6.0",
     "babylonjs-loaders": "^7.6.0",
     "cannon": "^0.6.2",
+    "lodash": "^4.17.21",
     "next": "14.2.3",
     "react": "^18",
     "react-dom": "^18"
